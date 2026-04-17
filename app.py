@@ -4,8 +4,6 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
-import requests
-import json
 
 # ─────────────────────────────────────────────
 #  CONFIGURACIÓN GENERAL
@@ -56,7 +54,7 @@ else:
     st.info(f"Datos sintéticos generados: {n_sintetico} observaciones ({distribucion}).")
     st.dataframe(df.head())
 
-    # ─────────────────────────────────────────────
+# ─────────────────────────────────────────────
 #  MÓDULO 2 – SELECCIÓN DE VARIABLE Y VISUALIZACIÓN
 # ─────────────────────────────────────────────
 if df is not None:
@@ -86,48 +84,25 @@ if df is not None:
 
     tabla_stats = pd.DataFrame({
         "Estadístico": [
-            "n (tamaño de muestra)",
-            "Media (x̄)",
-            "Mediana (Q2 / 50%)",
-            "Desviación estándar (s)",
-            "Mínimo",
-            "Máximo",
-            "Q1 (25%)",
-            "Q3 (75%)",
-            "Rango IQR (Q3 − Q1)",
-            "Sesgo (skewness)",
-            "Curtosis (exceso)",
+            "n (tamaño de muestra)", "Media (x̄)", "Mediana (Q2 / 50%)",
+            "Desviación estándar (s)", "Mínimo", "Máximo", "Q1 (25%)",
+            "Q3 (75%)", "Rango IQR (Q3 − Q1)", "Sesgo (skewness)", "Curtosis (exceso)",
         ],
         "Valor": [
-            f"{int(desc['count'])}",
-            f"{desc['mean']:.4f}",
-            f"{desc['50%']:.4f}",
-            f"{desc['std']:.4f}",
-            f"{desc['min']:.4f}",
-            f"{desc['max']:.4f}",
-            f"{desc['25%']:.4f}",
-            f"{desc['75%']:.4f}",
-            f"{IQR_val:.4f}",
-            f"{skewness:.4f}",
-            f"{kurtosis:.4f}",
+            f"{int(desc['count'])}", f"{desc['mean']:.4f}", f"{desc['50%']:.4f}",
+            f"{desc['std']:.4f}", f"{desc['min']:.4f}", f"{desc['max']:.4f}",
+            f"{desc['25%']:.4f}", f"{desc['75%']:.4f}", f"{IQR_val:.4f}",
+            f"{skewness:.4f}", f"{kurtosis:.4f}",
         ],
         "Interpretación": [
-            "Observaciones válidas",
-            "Promedio aritmético",
-            "Valor central de la distribución",
-            "Dispersión respecto a la media",
-            "Valor más pequeño observado",
-            "Valor más grande observado",
-            "25% de los datos están por debajo",
-            "75% de los datos están por debajo",
-            "Dispersión del 50% central",
-            sesgo_label,
-            kurt_label,
+            "Observaciones válidas", "Promedio aritmético", "Valor central",
+            "Dispersión respecto a la media", "Valor más pequeño", "Valor más grande",
+            "25% de los datos por debajo", "75% de los datos por debajo",
+            "Dispersión del 50% central", sesgo_label, kurt_label,
         ],
     })
 
     st.dataframe(tabla_stats, use_container_width=True, hide_index=True)
-
     st.divider()
 
     # ── GRÁFICAS ──
@@ -139,25 +114,82 @@ if df is not None:
         plt.style.use("seaborn-whitegrid")
 
     PALETTE = {"hist": "#4C72B0", "kde": "#DD8452", "box": "#55A868"}
-
     fig, axes = plt.subplots(1, 3, figsize=(16, 5))
 
-    # Histograma + KDE
-    sns.histplot(datos, kde=True, ax=axes[0],
-                 color=PALETTE["hist"], edgecolor="white")
+    sns.histplot(datos, kde=True, ax=axes[0], color=PALETTE["hist"], edgecolor="white")
     axes[0].set_title("Histograma + KDE")
-    axes[0].set_xlabel(columna)
 
-    # KDE
-    sns.kdeplot(datos, ax=axes[1], fill=True,
-                color=PALETTE["kde"])
+    sns.kdeplot(datos, ax=axes[1], fill=True, color=PALETTE["kde"])
     axes[1].set_title("Densidad (KDE)")
-    axes[1].set_xlabel(columna)
 
-    # Boxplot
-    sns.boxplot(y=datos, ax=axes[2],
-                color=PALETTE["box"])
+    sns.boxplot(y=datos, ax=axes[2], color=PALETTE["box"])
     axes[2].set_title("Boxplot")
 
     plt.tight_layout()
     st.pyplot(fig)
+
+    # ─────────────────────────────────────────────
+    #  MÓDULO 3 – PRUEBA DE HIPÓTESIS (Prueba Z)
+    # ─────────────────────────────────────────────
+    # IMPORTANTE: Este bloque ahora está dentro del 'if df is not None'
+    st.header("3. Prueba de hipótesis – Prueba Z")
+    st.markdown(
+        "Esta prueba asume **varianza poblacional conocida** y **n ≥ 30**. "
+        "Evalúa si la media muestral difiere significativamente de un valor hipotético."
+    )
+
+    if len(datos) < 30:
+        st.error(f"La muestra tiene solo {len(datos)} observaciones. Se requieren n ≥ 30 para la Prueba Z.")
+    else:
+        col_h1, col_h2 = st.columns(2)
+        with col_h1:
+            mu0 = st.number_input("Valor hipotético de la media (μ₀)", value=float(round(datos.mean(), 2)))
+            sigma_pob = st.number_input(
+                "Desviación estándar poblacional (σ)",
+                value=float(round(datos.std(), 4)),
+                min_value=0.0001
+            )
+        with col_h2:
+            alpha = st.selectbox("Nivel de significancia (α)", [0.01, 0.05, 0.10], index=1)
+            tipo_prueba = st.selectbox(
+                "Tipo de prueba",
+                ["Bilateral (H₁: μ ≠ μ₀)", "Cola izquierda (H₁: μ < μ₀)", "Cola derecha (H₁: μ > μ₀)"]
+            )
+
+        st.markdown(f"**H₀:** μ = {mu0}")
+        if "Bilateral" in tipo_prueba:
+            st.markdown(f"**H₁:** μ ≠ {mu0}")
+        elif "izquierda" in tipo_prueba:
+            st.markdown(f"**H₁:** μ < {mu0}")
+        else:
+            st.markdown(f"**H₁:** μ > {mu0}")
+
+        n = len(datos)
+        x_bar = datos.mean()
+        error_std = sigma_pob / np.sqrt(n)
+        Z_calc = (x_bar - mu0) / error_std
+
+        if "Bilateral" in tipo_prueba:
+            p_value = 2 * (1 - stats.norm.cdf(abs(Z_calc)))
+            Z_critico = stats.norm.ppf(1 - alpha / 2)
+            rechazar = abs(Z_calc) > Z_critico
+        elif "izquierda" in tipo_prueba:
+            p_value = stats.norm.cdf(Z_calc)
+            Z_critico = stats.norm.ppf(alpha)
+            rechazar = Z_calc < Z_critico
+        else:
+            p_value = 1 - stats.norm.cdf(Z_calc)
+            Z_critico = stats.norm.ppf(1 - alpha)
+            rechazar = Z_calc > Z_critico
+
+        st.subheader("Resultados de la prueba Z")
+        r1, r2, r3, r4 = st.columns(4)
+        r1.metric("Media muestral (x̄)", f"{x_bar:.4f}")
+        r2.metric("Estadístico Z", f"{Z_calc:.4f}")
+        r3.metric("p-value", f"{p_value:.4f}")
+        r4.metric("Z crítico", f"{Z_critico:.4f}")
+
+        if rechazar:
+            st.error(f"🔴 Se RECHAZA H₀ (p = {p_value:.4f} ≤ α = {alpha})")
+        else:
+            st.success(f"🟢 No se rechaza H₀ (p = {p_value:.4f} > α = {alpha})")
