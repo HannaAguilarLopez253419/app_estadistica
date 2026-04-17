@@ -127,6 +127,39 @@ if df is not None:
 
     plt.tight_layout()
     st.pyplot(fig)
+    st.divider()
+    st.subheader("Análisis de la Distribución")
+    
+    col_an1, col_an2, col_an3 = st.columns(3)
+    
+    with col_an1:
+        # Interpretación de Normalidad basada en el sesgo
+        es_normal = "Probable" if abs(skewness) < 0.5 else "Poco probable"
+        st.write(f"**1. ¿La distribución parece normal?**")
+        if es_normal == "Probable":
+            st.success(es_normal)
+        else:
+            st.warning(es_normal)
+        
+    with col_an2:
+        # Interpretación del Sesgo
+        st.write(f"**2. ¿Hay sesgo?**")
+        if abs(skewness) < 0.5:
+            st.info("Simétrica")
+        elif skewness > 0:
+            st.info("Positivo (Derecha)")
+        else:
+            st.info("Negativo (Izquierda)")
+            
+    with col_an3:
+        # Detección de Outliers (usando Z-score > 3)
+        z_scores = np.abs(stats.zscore(datos))
+        num_outliers = np.sum(z_scores > 3)
+        st.write(f"**3. ¿Hay outliers?**")
+        if num_outliers > 0:
+            st.error(f"Sí, detectados: {int(num_outliers)}")
+        else:
+            st.success("No detectados")
 
     # ─────────────────────────────────────────────
     #  MÓDULO 3 – PRUEBA DE HIPÓTESIS (Prueba Z)
@@ -188,6 +221,36 @@ if df is not None:
         r2.metric("Estadístico Z", f"{Z_calc:.4f}")
         r3.metric("p-value", f"{p_value:.4f}")
         r4.metric("Z crítico", f"{Z_critico:.4f}")
+        # --- NUEVA GRÁFICA DE ZONA DE RECHAZO ---
+        st.subheader("Gráfica de la Región Crítica")
+        
+        # 1. Crear eje X (de -4 a 4 para cubrir la campana de Gauss)
+        x_plot = np.linspace(-4, 4, 1000)
+        y_plot = stats.norm.pdf(x_plot, 0, 1) # Distribución Normal Estándar
+
+        fig_z, ax_z = plt.subplots(figsize=(10, 4))
+        ax_z.plot(x_plot, y_plot, color='black', label='Normal Estándar')
+
+        # 2. Sombrear zonas de rechazo según el tipo de prueba
+        if "Bilateral" in tipo_prueba:
+            ax_z.fill_between(x_plot, 0, y_plot, where=(x_plot > Z_critico) | (x_plot < -Z_critico), 
+                              color='red', alpha=0.3, label='Zona de Rechazo')
+        elif "izquierda" in tipo_prueba:
+            ax_z.fill_between(x_plot, 0, y_plot, where=(x_plot < Z_critico), 
+                              color='red', alpha=0.3, label='Zona de Rechazo')
+        else: # Cola derecha
+            ax_z.fill_between(x_plot, 0, y_plot, where=(x_plot > Z_critico), 
+                              color='red', alpha=0.3, label='Zona de Rechazo')
+
+        # 3. Dibujar línea de tu Z calculado
+        ax_z.axvline(Z_calc, color='blue', linestyle='--', linewidth=2, label=f'Z calculado ({Z_calc:.2f})')
+        
+        ax_z.set_title("Visualización de la Decisión Estadística")
+        ax_z.set_xlabel("Desviaciones Estándar (Z)")
+        ax_z.legend()
+        
+        st.pyplot(fig_z)
+        # --- FIN DE LA GRÁFICA ---
 
         if rechazar:
             st.error(f"🔴 Se RECHAZA H₀ (p = {p_value:.4f} ≤ α = {alpha})")
