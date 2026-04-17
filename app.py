@@ -9,3 +9,16 @@ if archivo:
     df = pd.read_csv(archivo)
     st.write("Vista previa de los datos:")
     st.write(df.head())
+if 'df' in locals():
+
+    st.subheader("Selección de variable")
+
+    columna = st.selectbox("Selecciona una variable", df.columns)
+
+    datos = df[columna]
+
+    # Validación
+    if datos.dtype != 'int64' and datos.dtype != 'float64':
+        st.warning("Selecciona una variable numérica")
+    else:
+        st.success("Variable válida para análisis")
