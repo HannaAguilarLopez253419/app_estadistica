@@ -1,5 +1,8 @@
 import pandas as pd
 import streamlit as st
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 
 st.title("App de Estadística distribuciones de probabilidad y prueba de hipotesis")
 st.write("Bienvenido a la aplicación")
@@ -22,3 +25,9 @@ if 'df' in locals():
         st.warning("Selecciona una variable numérica")
     else:
         st.success("Variable válida para análisis")
+     st.subheader("Histograma")
+
+fig, ax = plt.subplots()
+sns.histplot(datos, kde=True, ax=ax)
+
+st.pyplot(fig)   
