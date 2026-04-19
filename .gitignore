@@ -2,3 +2,19 @@ venv/
 __pycache__/
 *.pyc
 .env
+# Seguridad: No subir la API Key 
+ia_helper.py
+
+# Archivos temporales de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales (si usas uno)
+venv/
+env/
+.env
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
